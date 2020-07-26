@@ -138,21 +138,38 @@ uint32_t common_hal_vectorio_polygon_get_pixel(void *obj, int16_t x, int16_t y) 
     int y1 = self->points_list[1];
     for (size_t i=2; i <= self->len + 1; ++i) {
         VECTORIO_POLYGON_DEBUG("  {(%3d, %3d),", x1, y1);
-        int x2 = self->points_list[i % self->len];
+        const int x2 = self->points_list[i % self->len];
         ++i;
-        int y2 = self->points_list[i % self->len];
-        VECTORIO_POLYGON_DEBUG(" (%3d, %3d)}\n", x2, y2);
+        const int y2 = self->points_list[i % self->len];
+        VECTORIO_POLYGON_DEBUG(" (%3d, %3d)}", x2, y2);
         if ( y1 <= y ) {
-            if ( y2 > y && line_side(x1, y1, x2, y2, x, y) > 0 ) {
-                // Wind up, point is to the right of the edge vector
-                ++winding_number;
-                VECTORIO_POLYGON_DEBUG("    wind:%2d winding_number:%2d\n", 1, winding_number);
+            if ( y2 > y ) {
+                const int this_side = line_side(x1, y1, x2, y2, x, y);
+                if ( this_side > 0 ) {
+                    // Wind up, point is to the right of the edge vector
+                    ++winding_number;
+                    VECTORIO_POLYGON_DEBUG(" wind:%2d winding_number:%2d", 1, winding_number);
+                } else if ( this_side == 0 ) {
+                    VECTORIO_POLYGON_DEBUG(" point is on the line\n");
+                    return 1;
+                }
             }
-        } else if ( y2 <= y && line_side(x1, y1, x2, y2, x, y) < 0 ) {
-            // Wind down, point is to the left of the edge vector
-            --winding_number;
-            VECTORIO_POLYGON_DEBUG("    wind:%2d winding_number:%2d\n", -1, winding_number);
+        } else if ( y2 <= y ) {
+            const int this_side = line_side(x1, y1, x2, y2, x, y);
+            if ( this_side < 0 )
+            {
+                // Wind down, point is to the left of the edge vector
+                --winding_number;
+                VECTORIO_POLYGON_DEBUG(" wind:%2d winding_number:%2d", -1, winding_number);
+            }
+            else if ( this_side == 0 ) {
+                VECTORIO_POLYGON_DEBUG(" point is on the line\n");
+                return 1;
+            }
+        } else {
+            VECTORIO_POLYGON_DEBUG("          winding_number:%2d", winding_number);
         }
+        VECTORIO_POLYGON_DEBUG("\n");
 
         x1 = x2;
         y1 = y2;
